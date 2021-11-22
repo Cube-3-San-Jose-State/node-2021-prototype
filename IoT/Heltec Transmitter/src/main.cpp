@@ -1,10 +1,16 @@
-//***THIS IS FOR THE WEATHER STATION SENDER***
-#include "heltec.h"
-#include "LoRa.h"
+#include <heltec.h>
+#include <LoRa.h>
+#include <DHT.h>
+
 #include <TinyGPS++.h>
-#include "SoftwareSerial.h"
-#include "Adafruit_Sensor.h"
-#include "DHT.h"
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+#include <Wire.h>
+
+#include <SoftwareSerial.h>
+
+//MPU
+Adafruit_MPU6050 mpu;
 
 //Temperature Sensor
 #define DHT11PIN 33
@@ -12,24 +18,16 @@ DHT dht(DHT11PIN, DHT11);
 float currentTemp;
 float currentHumidity;
 
-//GPS
 double Lon, Lat;
 TinyGPSPlus gps;
 static const int RXPin = 17, TXPin = 2;
 static const uint32_t GPSBaud = 9600;
 SoftwareSerial gpsSerial(RXPin, TXPin);
 
-//Smoke Sensor
-#define MQ2PIN (32)
-float sensorValue;
-bool Smoke = false;
-
-
-
-
 
 void wakeGPS(){
     while (gpsSerial.available()){
+      Serial.println("GPS found");
     gps.encode(gpsSerial.read());
     if (gps.location.isUpdated()){
 
@@ -37,60 +35,87 @@ void wakeGPS(){
       Lon = gps.location.lng();
 
       Serial.print("Latitude: " + (String)Lat + "\nLongitude: " + (String)Lon);
-      LoRa.print("Latitude: " + (String)Lat + "\nLongitude: " + (String)Lon);
+      //LoRa.print("Latitude: " + (String)Lat + "\nLatitude: " + (String)Lon);
     }
   }
 }
 
-void getSmoke(){
-  pinMode(MQ2PIN, INPUT);
-  sensorValue = analogRead(MQ2PIN);
-  Serial.print("Sensor Value: ");
-  Serial.println(sensorValue);
-  if(sensorValue > 750)
-    {
-      Smoke = true;
-      Serial.println("Smoke detected!!!!");
-    }else{
-      Smoke = false;
-    }
+
+void mpuData(){
+    /* Get new sensor events with the readings */
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+
+  /* Print out the values */
+  Serial.print("Acceleration X: ");
+  Serial.print(a.acceleration.x);
+  Serial.print(", Y: ");
+  Serial.print(a.acceleration.y);
+  Serial.print(", Z: ");
+  Serial.print(a.acceleration.z);
+  Serial.println(" m/s^2");
+
+  Serial.print("Rotation X: ");
+  Serial.print(g.gyro.x);
+  Serial.print(", Y: ");
+  Serial.print(g.gyro.y);
+  Serial.print(", Z: ");
+  Serial.print(g.gyro.z);
+  Serial.println(" rad/s");
+
+  Serial.print("Temperature: ");
+  Serial.print(temp.temperature);
+  Serial.println(" degC");
+
+  Serial.println("");
+  delay(500);
 }
 
-
 void CompileSensors(){
+
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
 
   Serial.println("Temperature: " + (String)currentTemp +  "°C");
   Serial.println("Temperature: " + (String)(1.8*currentTemp+32) + "°F");
   Serial.println("Humidity: " + (String)currentHumidity + "%\n");
-  Serial.println("Latitude: " + (String)Lat + "\nLongitude: " + (String)Lon);
-  Serial.println("Smoke Detection: " + (String)Smoke);
+  mpuData();
+  wakeGPS();
 
   //Sending the Data so it can be parsed by the reciever
-  LoRa.println(1.8*currentTemp+32);
-  LoRa.println(currentHumidity);
-  LoRa.println(Lat);
-  LoRa.println(Lon);
-  LoRa.println(Smoke);
+  // LoRa.println(1.8*currentTemp+32);
+  // LoRa.println(currentHumidity);
+  // LoRa.println(Lat);
+  // LoRa.println(Lon);
+  // LoRa.println(Smoke);
 
-/*
+  //TEMP
   LoRa.println("Temperature: " + (String)currentTemp +  "°C");
   LoRa.println("Temperature: " + (String)(1.8*currentTemp+32) + "°F");
   LoRa.println("Humidity: " + (String)currentHumidity + "%");
-  LoRa.println("Latitude: " + (String)Lat + "\nLongitude: " + (String)Lon);
-  LoRa.println("Smoke Detection: " + (String)Smoke);
-  */
+  //MPU
+  LoRa.print("Acceleration X: ");
+  LoRa.print(a.acceleration.x);
+  LoRa.print(", Y: ");
+  LoRa.print(a.acceleration.y);
+  LoRa.print(", Z: ");
+  LoRa.print(a.acceleration.z);
+  LoRa.println(" m/s^2");
+  //GPS
+  LoRa.println("Latitude: " + (String)Lat + "\nLatitude: " + (String)Lon);
+  
+
+  
 }
 
 
 void SendLoRaPacket(){
   LoRa.beginPacket();
-  wakeGPS();
-  getSmoke();
   CompileSensors();
   LoRa.endPacket();
 }
 
-/*
+
 void displayOnBoard() {
    
   String CtemperatureDisplay ="Temperature: " + (String)currentTemp +  "°C";
@@ -106,30 +131,49 @@ void displayOnBoard() {
   // Display the readings
   Heltec.display->display();
 }
-*/
+
 
 
 void setup()
 {
-  Serial.begin(9600);
-  gpsSerial.begin(GPSBaud);
+  Serial.begin(GPSBaud);
   dht.begin();
+
+    // Try to initialize!
+  if (!mpu.begin()) {
+    Serial.println("Failed to find MPU6050 chip");
+    while (1) {
+      delay(10);
+    }
+  }
+  Serial.println("MPU6050 Found!");
+
+  Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, false /*Serial Enable*/);
 
 
   
   Serial.println("LoRa Sender starting...");
 
-  if (!LoRa.begin(915E6, 1)) { // Set frequency to 433, 868 or 915MHz
+  if (!LoRa.begin(915E6, 1)) 
+  { // Set frequency to 433, 868 or 915MHz
     Serial.println("Could not find a valid LoRa transceiver, check pins used and wiring!");
   }
+
 }
  
     
 void loop()
 {
-  currentHumidity = dht.readHumidity();
-  currentTemp = dht.readTemperature();
+  // currentHumidity = dht.readHumidity();
+  // currentTemp = dht.readTemperature();
+   displayOnBoard();
+  // SendLoRaPacket();
 
-  SendLoRaPacket();
+  //mpuData();
+  //wakeGPS();
+  delay(1000);
+  //Serial.print("hello");
   
+  
+
 }
