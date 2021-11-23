@@ -9,40 +9,92 @@
 
 #include <SoftwareSerial.h>
 
-//MPU
+// MPU
 Adafruit_MPU6050 mpu;
 
-//Temperature Sensor
+// Temperature Sensor
 #define DHT11PIN 33
 DHT dht(DHT11PIN, DHT11);
 float currentTemp;
 float currentHumidity;
 
-double Lon, Lat;
 TinyGPSPlus gps;
 static const int RXPin = 17, TXPin = 2;
 static const uint32_t GPSBaud = 9600;
-SoftwareSerial gpsSerial(RXPin, TXPin);
 
+void displayGPS()
+{
+  Serial.print(F("Location: "));
+  if (gps.location.isValid())
+  {
+    Serial.print(gps.location.lat(), 6);
+    Serial.print(F(","));
+    Serial.print(gps.location.lng(), 6);
+  }
+  else
+  {
+    Serial.print(F("INVALID"));
+  }
 
-void wakeGPS(){
-    while (gpsSerial.available()){
-      Serial.println("GPS found");
-    gps.encode(gpsSerial.read());
-    if (gps.location.isUpdated()){
+  Serial.print(F("  Date/Time: "));
+  if (gps.date.isValid())
+  {
+    Serial.print(gps.date.month());
+    Serial.print(F("/"));
+    Serial.print(gps.date.day());
+    Serial.print(F("/"));
+    Serial.print(gps.date.year());
+  }
+  else
+  {
+    Serial.print(F("INVALID"));
+  }
 
-      Lat = gps.location.lat();
-      Lon = gps.location.lng();
+  Serial.print(F(" "));
+  if (gps.time.isValid())
+  {
+    if (gps.time.hour() < 10)
+      Serial.print(F("0"));
+    Serial.print(gps.time.hour());
+    Serial.print(F(":"));
+    if (gps.time.minute() < 10)
+      Serial.print(F("0"));
+    Serial.print(gps.time.minute());
+    Serial.print(F(":"));
+    if (gps.time.second() < 10)
+      Serial.print(F("0"));
+    Serial.print(gps.time.second());
+    Serial.print(F("."));
+    if (gps.time.centisecond() < 10)
+      Serial.print(F("0"));
+    Serial.print(gps.time.centisecond());
+  }
+  else
+  {
+    Serial.print(F("INVALID"));
+  }
 
-      Serial.print("Latitude: " + (String)Lat + "\nLongitude: " + (String)Lon);
-      //LoRa.print("Latitude: " + (String)Lat + "\nLatitude: " + (String)Lon);
-    }
+  Serial.println();
+}
+
+void GPSInfo()
+{
+  // This sketch displays information every time a new sentence is correctly encoded.
+  while (Serial2.available() > 0)
+    if (gps.encode(Serial2.read()))
+      displayGPS();
+
+  if (millis() > 5000 && gps.charsProcessed() < 10)
+  {
+    Serial.println(F("No GPS detected: check wiring."));
+    while (true)
+      ;
   }
 }
 
-
-void mpuData(){
-    /* Get new sensor events with the readings */
+void mpuData()
+{
+  /* Get new sensor events with the readings */
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
@@ -71,29 +123,30 @@ void mpuData(){
   delay(500);
 }
 
-void CompileSensors(){
+void CompileSensors()
+{
 
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
-  Serial.println("Temperature: " + (String)currentTemp +  "°C");
-  Serial.println("Temperature: " + (String)(1.8*currentTemp+32) + "°F");
+  Serial.println("Temperature: " + (String)currentTemp + "°C");
+  Serial.println("Temperature: " + (String)(1.8 * currentTemp + 32) + "°F");
   Serial.println("Humidity: " + (String)currentHumidity + "%\n");
   mpuData();
-  wakeGPS();
+  GPSInfo();
 
-  //Sending the Data so it can be parsed by the reciever
-  // LoRa.println(1.8*currentTemp+32);
-  // LoRa.println(currentHumidity);
-  // LoRa.println(Lat);
-  // LoRa.println(Lon);
-  // LoRa.println(Smoke);
+  // Sending the Data so it can be parsed by the reciever
+  //  LoRa.println(1.8*currentTemp+32);
+  //  LoRa.println(currentHumidity);
+  //  LoRa.println(Lat);
+  //  LoRa.println(Lon);
+  //  LoRa.println(Smoke);
 
-  //TEMP
-  LoRa.println("Temperature: " + (String)currentTemp +  "°C");
-  LoRa.println("Temperature: " + (String)(1.8*currentTemp+32) + "°F");
+  // TEMP
+  LoRa.println("Temperature: " + (String)currentTemp + "°C");
+  LoRa.println("Temperature: " + (String)(1.8 * currentTemp + 32) + "°F");
   LoRa.println("Humidity: " + (String)currentHumidity + "%");
-  //MPU
+  // MPU
   LoRa.print("Acceleration X: ");
   LoRa.print(a.acceleration.x);
   LoRa.print(", Y: ");
@@ -101,27 +154,26 @@ void CompileSensors(){
   LoRa.print(", Z: ");
   LoRa.print(a.acceleration.z);
   LoRa.println(" m/s^2");
-  //GPS
-  LoRa.println("Latitude: " + (String)Lat + "\nLatitude: " + (String)Lon);
-  
-
-  
+  // GPS
+  LoRa.print(gps.location.lat(), 6);
+  LoRa.print(F(","));
+  LoRa.print(gps.location.lng(), 6);
 }
 
-
-void SendLoRaPacket(){
+void SendLoRaPacket()
+{
   LoRa.beginPacket();
   CompileSensors();
   LoRa.endPacket();
 }
 
+void displayOnBoard()
+{
 
-void displayOnBoard() {
-   
-  String CtemperatureDisplay ="Temperature: " + (String)currentTemp +  "°C";
-  String FtemperatureDisplay ="Temperature: " + (String)(1.8*currentTemp+32) + "°F";
+  String CtemperatureDisplay = "Temperature: " + (String)currentTemp + "°C";
+  String FtemperatureDisplay = "Temperature: " + (String)(1.8 * currentTemp + 32) + "°F";
   String humidityDisplay = "Humidity: " + (String)currentHumidity + "%";
- 
+
   Heltec.display->clear();
   // Prepare to display temperature C and F
   Heltec.display->drawString(0, 0, CtemperatureDisplay);
@@ -132,17 +184,18 @@ void displayOnBoard() {
   Heltec.display->display();
 }
 
-
-
 void setup()
 {
-  Serial.begin(GPSBaud);
+  Serial.begin(115200);
+  Serial2.begin(GPSBaud, SERIAL_8N1, TXPin, RXPin); // GPS Serial Baud-Rate
   dht.begin();
 
-    // Try to initialize!
-  if (!mpu.begin()) {
+  // Try to initialize!
+  if (!mpu.begin())
+  {
     Serial.println("Failed to find MPU6050 chip");
-    while (1) {
+    while (1)
+    {
       delay(10);
     }
   }
@@ -150,30 +203,23 @@ void setup()
 
   Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, false /*Serial Enable*/);
 
-
-  
   Serial.println("LoRa Sender starting...");
 
-  if (!LoRa.begin(915E6, 1)) 
+  if (!LoRa.begin(915E6, 1))
   { // Set frequency to 433, 868 or 915MHz
     Serial.println("Could not find a valid LoRa transceiver, check pins used and wiring!");
   }
-
 }
- 
-    
+
 void loop()
 {
   // currentHumidity = dht.readHumidity();
   // currentTemp = dht.readTemperature();
-   displayOnBoard();
+  CompileSensors();
   // SendLoRaPacket();
 
-  //mpuData();
-  //wakeGPS();
+  // mpuData();
+  // wakeGPS();
   delay(1000);
-  //Serial.print("hello");
-  
-  
-
+  // Serial.print("hello");
 }
