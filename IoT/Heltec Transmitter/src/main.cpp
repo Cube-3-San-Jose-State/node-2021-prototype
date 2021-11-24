@@ -1,12 +1,12 @@
-//LoRa and Heltec
+// LoRa and Heltec
 #include <heltec.h>
 #include <LoRa.h>
-//DHT Sensor
+// DHT Sensor
 #include <DHT.h>
 #include <Adafruit_Sensor.h>
-//GPS Library
+// GPS Library
 #include <TinyGPS++.h>
-//MPU Library
+// MPU Library
 #include <Adafruit_MPU6050.h>
 #include <Wire.h>
 
@@ -18,16 +18,12 @@ Adafruit_MPU6050 mpu;
 DHT dht(DHT11PIN, DHT11);
 float currentTemp;
 float currentHumidity;
-
-//GPS Module
+// GPS Module
 TinyGPSPlus gps;
 static const int RXPin = 17, TXPin = 2;
 static const uint32_t GPSBaud = 9600;
 
-
-
-
-//Displays GPS module data using TinyGPS Library
+// Displays GPS module data using TinyGPS Library
 void displayGPS()
 {
   Serial.print(F("Location: "));
@@ -83,8 +79,7 @@ void displayGPS()
   Serial.println();
 }
 
-
-//Uses Serial port to acquire GPS data
+// Uses Serial port to acquire GPS data
 void GPSInfo()
 {
   // This sketch displays information every time a new sentence is correctly encoded.
@@ -100,8 +95,7 @@ void GPSInfo()
   }
 }
 
-
-//Reading and Outputting MPU data
+// Reading and Outputting MPU data
 void mpuData()
 {
   /* Get new sensor events with the readings */
@@ -133,8 +127,7 @@ void mpuData()
   delay(500);
 }
 
-
-//Compiling all sensors
+// Compiling all sensors
 void CompileSensors()
 {
 
@@ -144,7 +137,7 @@ void CompileSensors()
   Serial.println("Temperature: " + (String)currentTemp + "°C");
   Serial.println("Temperature: " + (String)(1.8 * currentTemp + 32) + "°F");
   Serial.println("Humidity: " + (String)currentHumidity + "%\n");
-  mpuData();
+  //mpuData();
   GPSInfo();
 
   // Sending the Data so it can be parsed by the reciever
@@ -172,15 +165,12 @@ void CompileSensors()
   LoRa.print(gps.location.lng(), 6);
 }
 
-
-
 void SendLoRaPacket()
 {
   LoRa.beginPacket();
   CompileSensors();
   LoRa.endPacket();
 }
-
 
 void displayOnBoard()
 {
@@ -199,17 +189,16 @@ void displayOnBoard()
   Heltec.display->display();
 }
 
-
 void setup()
 {
   Serial.begin(115200);
   Serial2.begin(GPSBaud, SERIAL_8N1, TXPin, RXPin); // GPS Serial Baud-Rate
   Serial.println("Uploading GPS");
 
-  //dht.begin();
+  dht.begin(115200);
 
-  // // Try to initialize!
-  // if (!mpu.begin())
+  // Try to initialize!
+  // if (!mpu.begin(115200))
   // {
   //   Serial.println("Failed to find MPU6050 chip");
   //   while (1)
@@ -219,20 +208,19 @@ void setup()
   // }
   // Serial.println("MPU6050 Found!");
 
-  // Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, false /*Serial Enable*/);
+  Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, false /*Serial Enable*/);
 
-  // Serial.println("LoRa Sender starting...");
+  Serial.println("LoRa Sender starting...");
 
-  // if (!LoRa.begin(915E6, 1))
-  // { // Set frequency to 433, 868 or 915MHz
-  //   Serial.println("Could not find a valid LoRa transceiver, check pins used and wiring!");
-  // }
+  if (!LoRa.begin(915E6, 1))
+  { // Set frequency to 433, 868 or 915MHz
+    Serial.println("Could not find a valid LoRa transmitter, check pins used and wiring!");
+  }
 }
 
 // void loop()
 // {
-//   // currentHumidity = dht.readHumidity();
-//   // currentTemp = dht.readTemperature();
+//   //
 //   // CompileSensors();
 
 //   GPSInfo();
@@ -242,5 +230,10 @@ void setup()
 
 void loop()
 {
-  GPSInfo();
+
+  currentHumidity = dht.readHumidity();
+  currentTemp = dht.readTemperature();
+  CompileSensors();
+  delay(3000);
+
 }
