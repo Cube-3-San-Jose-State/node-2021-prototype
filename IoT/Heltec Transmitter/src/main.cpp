@@ -134,6 +134,9 @@ void CompileSensors()
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
+
+  currentHumidity = dht.readHumidity();
+  currentTemp = dht.readTemperature();
   Serial.println("Temperature: " + (String)currentTemp + "°C");
   Serial.println("Temperature: " + (String)(1.8 * currentTemp + 32) + "°F");
   Serial.println("Humidity: " + (String)currentHumidity + "%\n");
@@ -177,8 +180,6 @@ void displayOnBoard()
 {
 
   //DHT SENSOR
-  currentHumidity = dht.readHumidity();
-  currentTemp = dht.readTemperature();
   String CtemperatureDisplay = "Temperature: " + (String)currentTemp + "°C";
   String FtemperatureDisplay = "Temperature: " + (String)(1.8 * currentTemp + 32) + "°F";
   String humidityDisplay = "Humidity: " + (String)currentHumidity + "%";
