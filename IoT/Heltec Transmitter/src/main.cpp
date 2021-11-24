@@ -139,6 +139,7 @@ void CompileSensors()
   Serial.println("Humidity: " + (String)currentHumidity + "%\n");
   //mpuData();
   GPSInfo();
+  delay(3000);
 
   // Sending the Data so it can be parsed by the reciever
   //  LoRa.println(1.8*currentTemp+32);
@@ -175,6 +176,9 @@ void SendLoRaPacket()
 void displayOnBoard()
 {
 
+  //DHT SENSOR
+  currentHumidity = dht.readHumidity();
+  currentTemp = dht.readTemperature();
   String CtemperatureDisplay = "Temperature: " + (String)currentTemp + "°C";
   String FtemperatureDisplay = "Temperature: " + (String)(1.8 * currentTemp + 32) + "°F";
   String humidityDisplay = "Humidity: " + (String)currentHumidity + "%";
@@ -194,8 +198,7 @@ void setup()
   Serial.begin(115200);
   Serial2.begin(GPSBaud, SERIAL_8N1, TXPin, RXPin); // GPS Serial Baud-Rate
   Serial.println("Uploading GPS");
-
-  dht.begin(115200);
+  dht.begin(9600);
 
   // Try to initialize!
   // if (!mpu.begin(115200))
@@ -231,9 +234,5 @@ void setup()
 void loop()
 {
 
-  currentHumidity = dht.readHumidity();
-  currentTemp = dht.readTemperature();
   CompileSensors();
-  delay(3000);
-
 }
