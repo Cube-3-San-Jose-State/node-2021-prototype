@@ -1,13 +1,14 @@
+//LoRa and Heltec
 #include <heltec.h>
 #include <LoRa.h>
+//DHT Sensor
 #include <DHT.h>
-
-#include <TinyGPS++.h>
-#include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
+//GPS Library
+#include <TinyGPS++.h>
+//MPU Library
+#include <Adafruit_MPU6050.h>
 #include <Wire.h>
-
-#include <SoftwareSerial.h>
 
 // MPU
 Adafruit_MPU6050 mpu;
@@ -18,10 +19,15 @@ DHT dht(DHT11PIN, DHT11);
 float currentTemp;
 float currentHumidity;
 
+//GPS Module
 TinyGPSPlus gps;
 static const int RXPin = 17, TXPin = 2;
 static const uint32_t GPSBaud = 9600;
 
+
+
+
+//Displays GPS module data using TinyGPS Library
 void displayGPS()
 {
   Serial.print(F("Location: "));
@@ -77,6 +83,8 @@ void displayGPS()
   Serial.println();
 }
 
+
+//Uses Serial port to acquire GPS data
 void GPSInfo()
 {
   // This sketch displays information every time a new sentence is correctly encoded.
@@ -92,6 +100,8 @@ void GPSInfo()
   }
 }
 
+
+//Reading and Outputting MPU data
 void mpuData()
 {
   /* Get new sensor events with the readings */
@@ -123,6 +133,8 @@ void mpuData()
   delay(500);
 }
 
+
+//Compiling all sensors
 void CompileSensors()
 {
 
@@ -160,12 +172,15 @@ void CompileSensors()
   LoRa.print(gps.location.lng(), 6);
 }
 
+
+
 void SendLoRaPacket()
 {
   LoRa.beginPacket();
   CompileSensors();
   LoRa.endPacket();
 }
+
 
 void displayOnBoard()
 {
@@ -184,42 +199,48 @@ void displayOnBoard()
   Heltec.display->display();
 }
 
+
 void setup()
 {
   Serial.begin(115200);
   Serial2.begin(GPSBaud, SERIAL_8N1, TXPin, RXPin); // GPS Serial Baud-Rate
-  dht.begin();
+  Serial.println("Uploading GPS");
 
-  // Try to initialize!
-  if (!mpu.begin())
-  {
-    Serial.println("Failed to find MPU6050 chip");
-    while (1)
-    {
-      delay(10);
-    }
-  }
-  Serial.println("MPU6050 Found!");
+  //dht.begin();
 
-  Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, false /*Serial Enable*/);
+  // // Try to initialize!
+  // if (!mpu.begin())
+  // {
+  //   Serial.println("Failed to find MPU6050 chip");
+  //   while (1)
+  //   {
+  //     delay(10);
+  //   }
+  // }
+  // Serial.println("MPU6050 Found!");
 
-  Serial.println("LoRa Sender starting...");
+  // Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, false /*Serial Enable*/);
 
-  if (!LoRa.begin(915E6, 1))
-  { // Set frequency to 433, 868 or 915MHz
-    Serial.println("Could not find a valid LoRa transceiver, check pins used and wiring!");
-  }
+  // Serial.println("LoRa Sender starting...");
+
+  // if (!LoRa.begin(915E6, 1))
+  // { // Set frequency to 433, 868 or 915MHz
+  //   Serial.println("Could not find a valid LoRa transceiver, check pins used and wiring!");
+  // }
 }
+
+// void loop()
+// {
+//   // currentHumidity = dht.readHumidity();
+//   // currentTemp = dht.readTemperature();
+//   // CompileSensors();
+
+//   GPSInfo();
+
+//   //delay(1000);
+// }
 
 void loop()
 {
-  // currentHumidity = dht.readHumidity();
-  // currentTemp = dht.readTemperature();
-  CompileSensors();
-  // SendLoRaPacket();
-
-  // mpuData();
-  // wakeGPS();
-  delay(1000);
-  // Serial.print("hello");
+  GPSInfo();
 }
