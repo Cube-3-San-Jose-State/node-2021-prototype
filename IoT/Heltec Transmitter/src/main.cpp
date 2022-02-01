@@ -18,6 +18,7 @@ Adafruit_MPU6050 mpu;
 DHT dht(DHT11PIN, DHT11);
 float currentTemp;
 float currentHumidity;
+
 // GPS Module
 TinyGPSPlus gps;
 static const int RXPin = 17, TXPin = 2;
@@ -134,7 +135,6 @@ void CompileSensors()
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
-
   currentHumidity = dht.readHumidity();
   currentTemp = dht.readTemperature();
   Serial.println("Temperature: " + (String)currentTemp + "°C");
@@ -156,13 +156,13 @@ void CompileSensors()
   LoRa.println("Temperature: " + (String)(1.8 * currentTemp + 32) + "°F");
   LoRa.println("Humidity: " + (String)currentHumidity + "%");
   // MPU
-  LoRa.print("Acceleration X: ");
-  LoRa.print(a.acceleration.x);
-  LoRa.print(", Y: ");
-  LoRa.print(a.acceleration.y);
-  LoRa.print(", Z: ");
-  LoRa.print(a.acceleration.z);
-  LoRa.println(" m/s^2");
+  // LoRa.print("Acceleration X: ");
+  // LoRa.print(a.acceleration.x);
+  // LoRa.print(", Y: ");
+  // LoRa.print(a.acceleration.y);
+  // LoRa.print(", Z: ");
+  // LoRa.print(a.acceleration.z);
+  // LoRa.println(" m/s^2");
   // GPS
   LoRa.print(gps.location.lat(), 6);
   LoRa.print(F(","));
@@ -222,18 +222,7 @@ void setup()
   }
 }
 
-// void loop()
-// {
-//   //
-//   // CompileSensors();
-
-//   GPSInfo();
-
-//   //delay(1000);
-// }
-
 void loop()
 {
-
-  CompileSensors();
+  SendLoRaPacket();
 }
