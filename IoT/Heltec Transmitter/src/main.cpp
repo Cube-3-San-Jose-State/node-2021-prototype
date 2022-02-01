@@ -4,8 +4,9 @@
 // DHT Sensor
 #include <DHT.h>
 #include <Adafruit_Sensor.h>
-// GPS Library
+// GPS Module
 #include <TinyGPS++.h>
+#include <SoftwareSerial.h>
 // MPU Library
 #include <Adafruit_MPU6050.h>
 #include <Wire.h>
@@ -14,86 +15,34 @@
 Adafruit_MPU6050 mpu;
 
 // Temperature Sensor
+String temp_string;
 #define DHT11PIN 33
 DHT dht(DHT11PIN, DHT11);
 float currentTemp;
 float currentHumidity;
 
-// GPS Module
+// GPS
+String gps_string;
+double Lon, Lat;
 TinyGPSPlus gps;
 static const int RXPin = 17, TXPin = 2;
 static const uint32_t GPSBaud = 9600;
 
-// Displays GPS module data using TinyGPS Library
-void displayGPS()
+String GetGPS()
 {
-  Serial.print(F("Location: "));
-  if (gps.location.isValid())
+  while (Serial2.available())
   {
-    Serial.print(gps.location.lat(), 6);
-    Serial.print(F(","));
-    Serial.print(gps.location.lng(), 6);
-  }
-  else
-  {
-    Serial.print(F("INVALID"));
-  }
+    gps.encode(Serial2.read());
+    if (gps.location.isUpdated())
+    {
 
-  Serial.print(F("  Date/Time: "));
-  if (gps.date.isValid())
-  {
-    Serial.print(gps.date.month());
-    Serial.print(F("/"));
-    Serial.print(gps.date.day());
-    Serial.print(F("/"));
-    Serial.print(gps.date.year());
+      Lat = gps.location.lat();
+      Lon = gps.location.lng();
+      gps_string = (String)Lat + ",\n" + (String)Lon;
+      Serial.println(gps_string);
+    }
   }
-  else
-  {
-    Serial.print(F("INVALID"));
-  }
-
-  Serial.print(F(" "));
-  if (gps.time.isValid())
-  {
-    if (gps.time.hour() < 10)
-      Serial.print(F("0"));
-    Serial.print(gps.time.hour());
-    Serial.print(F(":"));
-    if (gps.time.minute() < 10)
-      Serial.print(F("0"));
-    Serial.print(gps.time.minute());
-    Serial.print(F(":"));
-    if (gps.time.second() < 10)
-      Serial.print(F("0"));
-    Serial.print(gps.time.second());
-    Serial.print(F("."));
-    if (gps.time.centisecond() < 10)
-      Serial.print(F("0"));
-    Serial.print(gps.time.centisecond());
-  }
-  else
-  {
-    Serial.print(F("INVALID"));
-  }
-
-  Serial.println();
-}
-
-// Uses Serial port to acquire GPS data
-void GPSInfo()
-{
-  // This sketch displays information every time a new sentence is correctly encoded.
-  while (Serial2.available() > 0)
-    if (gps.encode(Serial2.read()))
-      displayGPS();
-
-  if (millis() > 5000 && gps.charsProcessed() < 10)
-  {
-    Serial.println(F("No GPS detected: check wiring."));
-    while (true)
-      ;
-  }
+  return gps_string;
 }
 
 // Reading and Outputting MPU data
@@ -128,45 +77,23 @@ void mpuData()
   delay(500);
 }
 
-// Compiling all sensors
-void CompileSensors()
-{
-
-  sensors_event_t a, g, temp;
-  mpu.getEvent(&a, &g, &temp);
-
+String GetTemp(){
   currentHumidity = dht.readHumidity();
   currentTemp = dht.readTemperature();
   Serial.println("Temperature: " + (String)currentTemp + "°C");
   Serial.println("Temperature: " + (String)(1.8 * currentTemp + 32) + "°F");
   Serial.println("Humidity: " + (String)currentHumidity + "%\n");
-  //mpuData();
-  GPSInfo();
-  delay(3000);
+  temp_string = (String)(1.8 * currentTemp + 32) + "°F" + ", " + (String)currentHumidity + "%";
+  return temp_string;
+}
 
-  // Sending the Data so it can be parsed by the reciever
-  //  LoRa.println(1.8*currentTemp+32);
-  //  LoRa.println(currentHumidity);
-  //  LoRa.println(Lat);
-  //  LoRa.println(Lon);
-  //  LoRa.println(Smoke);
-
-  // TEMP
-  LoRa.println("Temperature: " + (String)currentTemp + "°C");
-  LoRa.println("Temperature: " + (String)(1.8 * currentTemp + 32) + "°F");
-  LoRa.println("Humidity: " + (String)currentHumidity + "%");
-  // MPU
-  // LoRa.print("Acceleration X: ");
-  // LoRa.print(a.acceleration.x);
-  // LoRa.print(", Y: ");
-  // LoRa.print(a.acceleration.y);
-  // LoRa.print(", Z: ");
-  // LoRa.print(a.acceleration.z);
-  // LoRa.println(" m/s^2");
-  // GPS
-  LoRa.print(gps.location.lat(), 6);
-  LoRa.print(F(","));
-  LoRa.print(gps.location.lng(), 6);
+// Compiling all sensors
+void CompileSensors()
+{
+  GetTemp();
+  GetGPS();
+  LoRa.println(GetTemp());
+  LoRa.println(GetGPS());
 }
 
 void SendLoRaPacket()
@@ -178,7 +105,6 @@ void SendLoRaPacket()
 
 void displayOnBoard()
 {
-
   //DHT SENSOR
   String CtemperatureDisplay = "Temperature: " + (String)currentTemp + "°C";
   String FtemperatureDisplay = "Temperature: " + (String)(1.8 * currentTemp + 32) + "°F";
@@ -225,4 +151,5 @@ void setup()
 void loop()
 {
   SendLoRaPacket();
+  delay(3000);
 }
