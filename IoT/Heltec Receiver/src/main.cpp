@@ -8,8 +8,8 @@
 const char *AP_SSID = "kingdom2";
 const char *AP_PWD = "22039622";
 
-String Packet;
-float temperature, humidity, longitude, latitude, smoke;
+String Packet, GPS_location;
+float temperature, humidity;
 
 WiFiMulti wifiMulti;
 
@@ -24,7 +24,7 @@ void LoraRecieve()
     Packet = LoRa.readString();
   }
   Serial.println(Packet);
-  sscanf(Packet.c_str(), "%f\n%f\n%f\n%f\n%f\n", &temperature, &humidity, &longitude, &latitude, &smoke);
+  sscanf(Packet.c_str(), "%f\n%f\n%[^&]\n", &temperature, &humidity, &GPS_location);
   delay(10000);
 }
 
