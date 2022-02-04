@@ -13,6 +13,7 @@
 
 // MPU
 Adafruit_MPU6050 mpu;
+String mpu_data;
 
 // Temperature Sensor
 String temp_string;
@@ -35,7 +36,6 @@ String GetGPS()
     gps.encode(Serial2.read());
     if (gps.location.isUpdated())
     {
-
       Lat = gps.location.lat();
       Lon = gps.location.lng();
       gps_string = (String)Lat + ",\n" + (String)Lon;
@@ -45,14 +45,12 @@ String GetGPS()
   return gps_string;
 }
 
-// Reading and Outputting MPU data
-void mpuData()
+String Getmpu()
 {
-  /* Get new sensor events with the readings */
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
-  /* Print out the values */
+  // Accel Values
   Serial.print("Acceleration X: ");
   Serial.print(a.acceleration.x);
   Serial.print(", Y: ");
@@ -60,7 +58,7 @@ void mpuData()
   Serial.print(", Z: ");
   Serial.print(a.acceleration.z);
   Serial.println(" m/s^2");
-
+  // Gyro Values
   Serial.print("Rotation X: ");
   Serial.print(g.gyro.x);
   Serial.print(", Y: ");
@@ -68,16 +66,16 @@ void mpuData()
   Serial.print(", Z: ");
   Serial.print(g.gyro.z);
   Serial.println(" rad/s");
-
+  // Temo Values
   Serial.print("Temperature: ");
   Serial.print(temp.temperature);
   Serial.println(" degC");
-
-  Serial.println("");
-  delay(500);
+  mpu_data = (String)a.acceleration.x + ",\n" + (String)a.acceleration.y + ",\n" + (String)a.acceleration.z;
+  return mpu_data;
 }
 
-String GetTemp(){
+String GetTemp()
+{
   currentHumidity = dht.readHumidity();
   currentTemp = dht.readTemperature();
   Serial.println("Temperature: " + (String)currentTemp + "°C");
@@ -91,8 +89,10 @@ String GetTemp(){
 void CompileSensors()
 {
   GetTemp();
+  Getmpu();
   GetGPS();
   LoRa.println(GetTemp());
+  LoRa.println(Getmpu());
   LoRa.println(GetGPS());
 }
 
@@ -105,47 +105,26 @@ void SendLoRaPacket()
 
 void displayOnBoard()
 {
-  //DHT SENSOR
-  String CtemperatureDisplay = "Temperature: " + (String)currentTemp + "°C";
-  String FtemperatureDisplay = "Temperature: " + (String)(1.8 * currentTemp + 32) + "°F";
-  String humidityDisplay = "Humidity: " + (String)currentHumidity + "%";
-
   Heltec.display->clear();
-  // Prepare to display temperature C and F
-  Heltec.display->drawString(0, 0, CtemperatureDisplay);
-  Heltec.display->drawString(0, 12, FtemperatureDisplay);
-  // Prepare to display humidity
-  Heltec.display->drawString(0, 24, humidityDisplay);
-  // Display the readings
+  Heltec.display->drawString(0, 0, "Transceiver Operational");
   Heltec.display->display();
 }
 
 void setup()
 {
   Serial.begin(115200);
+  mpu.begin(115200);
   Serial2.begin(GPSBaud, SERIAL_8N1, TXPin, RXPin); // GPS Serial Baud-Rate
   Serial.println("Uploading GPS");
   dht.begin(9600);
 
-  // Try to initialize!
-  // if (!mpu.begin(115200))
-  // {
-  //   Serial.println("Failed to find MPU6050 chip");
-  //   while (1)
-  //   {
-  //     delay(10);
-  //   }
-  // }
-  // Serial.println("MPU6050 Found!");
-
   Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, false /*Serial Enable*/);
-
   Serial.println("LoRa Sender starting...");
-
   if (!LoRa.begin(915E6, 1))
   { // Set frequency to 433, 868 or 915MHz
     Serial.println("Could not find a valid LoRa transmitter, check pins used and wiring!");
   }
+  displayOnBoard();
 }
 
 void loop()
