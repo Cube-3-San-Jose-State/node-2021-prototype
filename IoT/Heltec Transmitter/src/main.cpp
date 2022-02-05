@@ -14,14 +14,16 @@
 // MPU
 Adafruit_MPU6050 mpu;
 String mpu_data;
-
+// Smoke Sensor
+#define MQ2PIN (32)
+float sensorValue;
+bool Smoke = false;
 // Temperature Sensor
 String temp_string;
 #define DHT11PIN 33
 DHT dht(DHT11PIN, DHT11);
 float currentTemp;
 float currentHumidity;
-
 // GPS
 String gps_string;
 double Lon, Lat;
@@ -70,8 +72,19 @@ String Getmpu()
   Serial.print("Temperature: ");
   Serial.print(temp.temperature);
   Serial.println(" degC");
+
   mpu_data = (String)a.acceleration.x + ",\n" + (String)a.acceleration.y + ",\n" + (String)a.acceleration.z;
   return mpu_data;
+}
+
+bool GetSmoke()
+{
+  pinMode(MQ2PIN, INPUT);
+  sensorValue = analogRead(MQ2PIN);
+  Serial.print("Sensor Value: ");
+  Smoke = (sensorValue > 750) ? Smoke = true : Smoke  = false;
+  (Smoke == true) ?  Serial.println("Smoke detected!!!!\n") :  Serial.println("Smoke not detected\n");
+  return Smoke;
 }
 
 String GetTemp()
@@ -85,14 +98,17 @@ String GetTemp()
   return temp_string;
 }
 
-// Compiling all sensors
 void CompileSensors()
 {
+  // Printing
   GetTemp();
   Getmpu();
+  GetSmoke();
   GetGPS();
+  // LoRa output
   LoRa.println(GetTemp());
   LoRa.println(Getmpu());
+  LoRa.println(GetSmoke());
   LoRa.println(GetGPS());
 }
 
@@ -116,7 +132,7 @@ void setup()
   mpu.begin(115200);
   Serial2.begin(GPSBaud, SERIAL_8N1, TXPin, RXPin); // GPS Serial Baud-Rate
   Serial.println("Uploading GPS");
-  dht.begin(9600);
+  dht.begin(115200);
 
   Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, false /*Serial Enable*/);
   Serial.println("LoRa Sender starting...");
