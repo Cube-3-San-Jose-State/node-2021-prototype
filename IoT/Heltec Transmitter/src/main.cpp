@@ -1,13 +1,13 @@
 // LoRa and Heltec
 #include <heltec.h>
 #include <LoRa.h>
-// DHT Sensor
+// DHT Sensor -- temperature & humidity
 #include <DHT.h>
 #include <Adafruit_Sensor.h>
 // GPS Module
 #include <TinyGPS++.h>
 #include <SoftwareSerial.h>
-// MPU Library
+// MPU Library -- IMU device
 #include <Adafruit_MPU6050.h>
 #include <Wire.h>
 
@@ -47,7 +47,7 @@ String GetGPS()
   return gps_string;
 }
 
-String Getmpu()
+String GetMpu()
 {
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
@@ -82,8 +82,8 @@ bool GetSmoke()
   pinMode(MQ2PIN, INPUT);
   sensorValue = analogRead(MQ2PIN);
   Serial.print("Sensor Value: ");
-  Smoke = (sensorValue > 750) ? Smoke = true : Smoke  = false;
-  (Smoke == true) ?  Serial.println("Smoke detected!!!!\n") :  Serial.println("Smoke not detected\n");
+  Smoke = (sensorValue > 750) ? Smoke = true : Smoke = false;
+  (Smoke == true) ? Serial.println("Smoke detected!!!!\n") : Serial.println("Smoke not detected\n");
   return Smoke;
 }
 
@@ -102,12 +102,12 @@ void CompileSensors()
 {
   // Printing
   GetTemp();
-  Getmpu();
+  GetMpu();
   GetSmoke();
   GetGPS();
   // LoRa output
   LoRa.println(GetTemp());
-  LoRa.println(Getmpu());
+  LoRa.println(GetMpu());
   LoRa.println(GetSmoke());
   LoRa.println(GetGPS());
 }
