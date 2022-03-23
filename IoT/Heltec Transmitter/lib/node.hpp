@@ -11,7 +11,7 @@
 #include <Adafruit_MPU6050.h>
 #include <Wire.h>
 
-class Node
+class Node : public TransmitterInterface
 {
 public:
     Node()
@@ -32,6 +32,32 @@ public:
         DisplayOnBoard();
     };
 
+    SensorInterface::SensorData GetSensorData() override
+    {
+        return transmitter_sensor_data_;
+    }
+
+    void PrintData() override
+    {
+        // TODO;
+    }
+
+    void TransmitData() override
+    {
+        CreateLoRaPacket();
+        SendLoRaPacket();
+    }
+
+private:
+    struct TransmitterSensorData : public SensorInterface::SensorData
+    {
+        string gps_coordinates = "";
+        string acceleration = "";
+        string rotation = "";
+        string temperature = "";
+        bool is_smoke_detected = "";
+    };
+
     void CreateLoRaPacket()
     {
         LoRa.println(GetTemperatureData());
@@ -47,7 +73,6 @@ public:
         SendLoRaPacket();
     }
 
-private:
     void DisplayOnBoard()
     {
         Heltec.display->clear();
@@ -60,12 +85,7 @@ private:
         LoRa.beginPacket();
     }
 
-    void SendLoRaPacket()
-    {
-        LoRa.endPacket();
-    }
-
-    String GetGpsData()
+    string GetGpsData()
     {
         while (Serial2.available())
         {
@@ -82,7 +102,7 @@ private:
         return "";
     }
 
-    String GetAccelerometerData()
+    string GetAccelerometerData()
     {
         sensors_event_t accelerometer, gyroscope, temperature;
         mpu.getEvent(&accelerometer, &gyroscope, &temperature);
@@ -121,7 +141,7 @@ private:
         return smoke;
     }
 
-    String GetTemperatureData()
+    string GetTemperatureData()
     {
         current_humidity = dht.readHumidity();
         current_temperature = dht.readTemperature();
@@ -136,6 +156,7 @@ private:
     static const int kRxPin = 17;
     static const int kTxPin = 2;
     static const uint32_t kGpsBaud = 9600;
+    TransmitterSensorData transmitter_sensor_data_;
 
     Adafruit_MPU6050 mpu_;
     DHT dht_(dht11_pin_, DHT11);
